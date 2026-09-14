@@ -78,6 +78,8 @@ docker build --load -f tests/Dockerfile.smoke -t dwg-dxf-smoke . && docker run -
 4. O `bin/dwg2dxf` é estático e não depende de nada do sistema; o `packages.txt` pede só as fontes
 5. Deploy
 
+App no ar: https://dwg-para-dxf.streamlit.app/
+
 ## 🔁 Reconstruir o binário do LibreDWG
 
 O `bin/dwg2dxf` foi compilado a partir do código-fonte oficial (release 0.14) com o `bin/build/Dockerfile`:
