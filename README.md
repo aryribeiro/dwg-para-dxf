@@ -19,8 +19,9 @@ Escopo único e fixo — este app não lida com nenhum outro formato de entrada 
 
 1. **GNU LibreDWG** ([`bin/dwg2dxf`](https://github.com/LibreDWG/libredwg), binário Linux estático, versão 0.14) lê o DWG e grava um DXF bruto.
 2. **[ezdxf](https://ezdxf.mozman.at/)** lê esse DXF em modo de recuperação, consertando o desalinhamento típico do LibreDWG.
-3. O mesmo ezdxf **grava o desenho de volta em DXF** — e é esse arquivo que você baixa.
-4. O arquivo gravado é **reaberto com o leitor estrito** antes de ser entregue, e é dele que sai a imagem da prévia.
+3. Cada bloco de **texto de várias linhas** (a entidade `MTEXT` do AutoCAD) vira **texto de uma linha** (`TEXT`), com as quebras de linha, o alinhamento e a rotação recalculados pelo ezdxf. Sem isso o desenho abre **sem texto nenhum** em boa parte dos programas: o LibreOffice Draw, por exemplo, desenha `TEXT` e ignora `MTEXT` calado. Medido numa prancha real: o mesmo desenho entregue com `MTEXT` mostra zero caractere; com `TEXT`, mostra o texto todo.
+4. O mesmo ezdxf **grava o desenho de volta em DXF** — e é esse arquivo que você baixa.
+5. O arquivo gravado é **reaberto com o leitor estrito** antes de ser entregue, e é dele que sai a imagem da prévia.
 
 ### Por que o app não entrega o DXF que o LibreDWG produziu
 
@@ -36,6 +37,8 @@ O app declara `image/vnd.dxf`, que é o tipo **registrado na IANA** para DXF (li
 
 - **Sólidos e superfícies do AutoCAD** (`3DSOLID`, `REGION`, `BODY`, superfícies) não chegam ao arquivo final. A forma deles não é desenho: é um bloco de dados do modelador que, nas versões novas do DXF, fica numa seção separada que o leitor livre de DWG não copia. O que chega aqui é uma casca vazia, e o app avisa quantas foram, em vez de entregar um sucesso silencioso. Medido na fixture `example_2018.dwg`: 2 `REGION` e 1 `3DSOLID` de 66 elementos.
 - **Tabelas do AutoCAD** (`ACAD_TABLE`) e objetos de complementos (Architecture, Civil 3D) podem não ser lidos pelo LibreDWG; quando isso acontece a interface diz o quê.
+- **Texto de várias linhas vira uma linha por entidade.** É o preço da conversão do item 3: no AutoCAD um parágrafo que era um bloco só passa a ser uma entidade por linha, e editá-lo dá mais trabalho. Em troca, o texto aparece em qualquer programa que abra DXF. A interface informa quantos blocos foram convertidos.
+- **O tamanho do desenho na página depende de quem abre.** O DXF guarda as coordenadas do desenho, não um tamanho de papel. O LibreOffice Draw trata cada unidade de desenho como 1 mm, então uma prancha de 30 unidades aparece com uns 3 cm no meio de uma folha grande — é só dar zoom. Um visualizador de CAD ajusta o desenho à tela sozinho. Escalar a geometria para "caber bonito" falsificaria todas as cotas, e por isso o app não faz isso.
 - **A imagem da prévia** é só para conferência, a 1600 px no lado maior. O que vale é o DXF.
 - **Fontes**: o DXF guarda o *nome* da fonte, não os desenhos das letras — quem abrir o arquivo vê a fonte da própria máquina. Por isso a troca de fonte no servidor afeta **apenas a imagem da prévia**, e o app diz isso com todas as letras em vez de assustar à toa. `static/fonts/` traz a mesma coleção de 181 fontes dos apps irmãos, incluindo a Arial, registrada no leitor **antes** de o desenho ser aberto (ler o desenho já mede o texto, e a primeira medição é que fixa a fonte).
 - **Concorrência e disco**: no máximo 2 conversões simultâneas e limpeza de pastas temporárias órfãs, como nos apps irmãos.

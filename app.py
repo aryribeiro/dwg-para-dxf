@@ -37,10 +37,6 @@ st.markdown("""
     .block-container {
         padding-top: 0rem !important;
         padding-bottom: 0rem !important;
-        /* Largura do cartão por decisão do dono: fica estreita, igual à dos
-           apps irmãos. Numa prancha de CAD o texto miúdo não é legível neste
-           tamanho — quem quiser ler abre a prévia em tela cheia, e é por isso
-           que a imagem é gerada com 4000 px (ver PREVIEW_LONG_SIDE_PX). */
         max-width: 28rem !important;
     }
     header {display: none !important;}
@@ -86,13 +82,11 @@ TARGET_EXT = "dxf"
 # nenhum dos dois registros. Conferido em iana.org/assignments/media-types.
 TARGET_MIME = "image/vnd.dxf"
 
-# A prévia serve para conferir que o desenho veio inteiro — o que se baixa é
-# o DXF. Medido numa prancha real de 30 unidades com cotas de 0,12: a 1600 px
-# a menor cota fica com 5,7 px na imagem, legível só em 1:1; ampliar a imagem
-# na tela cheia do Streamlit já não tinha resolução para dar. A 4000 px a
-# mesma cota fica com 15,5 px e a tela cheia vira uma leitura de verdade.
-# É o mesmo número do app irmão dwg-para-png, já aprovado em produção.
-PREVIEW_LONG_SIDE_PX = 4000
+# A prévia serve só para conferir na tela que o desenho veio inteiro — o que
+# se baixa é o DXF. 1600 px chegam de sobra na coluna estreita do app e
+# custam 2,6 MP de memória em vez dos 16 MP de uma imagem de 4000 px, o que
+# importa no contêiner de 1 GB do Streamlit Cloud.
+PREVIEW_LONG_SIDE_PX = 1600
 PREVIEW_LONG_SIDE_IN = 10.0
 PREVIEW_MIN_SIDE_PX = 200
 PAGE_MARGIN_MM = 5.0
@@ -327,6 +321,38 @@ def _count_types(msp):
     return contagem
 
 
+def explode_mtext(msp) -> int:
+    """Converte cada MTEXT (texto de várias linhas) em TEXT de uma linha.
+    Devolve quantos blocos foram convertidos.
+
+    POR QUE: o MTEXT é a entidade que o AutoCAD usa para texto desde 1992,
+    mas metade dos programas que abrem DXF simplesmente NÃO a desenha — o
+    arquivo abre, o desenho aparece e o texto some, sem aviso nenhum.
+    Medido no LibreOffice Draw com a prancha da torre: o mesmo desenho
+    entregue com MTEXT mostra ZERO caractere; com TEXT mostra o texto todo.
+    O AutoCAD desenha as duas, então converter só tem um custo: no AutoCAD
+    o parágrafo deixa de ser um bloco único e vira uma linha por entidade.
+
+    O MTextExplode do ezdxf é quem faz a conta de quebra de linha,
+    alinhamento, rotação e altura — inclusive as linhas de sublinhado. Ele
+    precisa das fontes registradas para medir o texto, o que já aconteceu
+    em prepare_font_environment(), no começo de sanitize_dxf."""
+    from ezdxf.addons import MTextExplode
+
+    alvos = list(msp.query("MTEXT"))
+    if not alvos:
+        return 0
+    try:
+        with MTextExplode(msp) as xpl:
+            for m in alvos:
+                xpl.explode(m)
+    except Exception:
+        # sem a conversão o texto continua no arquivo como MTEXT: pior para
+        # quem usa um leitor simples, mas melhor do que entregar nada
+        return 0
+    return len(alvos)
+
+
 def sanitize_dxf(dxf_path: Path, work_dir: Path, stem: str):
     """Lê o DXF (com reparo) e o grava de volta com o ezdxf. O arquivo
     gravado é o que o usuário baixa. Devolve (caminho, doc_relido, info).
@@ -348,14 +374,18 @@ def sanitize_dxf(dxf_path: Path, work_dir: Path, stem: str):
         raise ConversionError("dxf inválido")
 
     msp = doc.modelspace()
-    antes = _count_types(msp)
     info = {
         "dxfversion": doc.dxfversion,
-        "entities": len(msp),
+        "entities": len(msp),        # o que veio do DWG, antes de qualquer ajuste
         "layers": len(doc.layers),
         "repairs": repairs,
     }
     info.update(fonts_report(doc, msp))
+    info["exploded_mtext"] = explode_mtext(msp)
+    # A contagem de referência é tirada DEPOIS da conversão de texto: o MTEXT
+    # que virou TEXT não é perda, é a mesma informação noutra entidade. Medir
+    # antes faria o app acusar 33 textos perdidos onde não se perdeu nenhum.
+    antes = _count_types(msp)
 
     out_path = work_dir / (stem + ".dxf")
     try:
@@ -585,6 +615,9 @@ def main():
               f"{info['kept']} elementos · {info['layers']} camadas")
     if info["repairs"]:
         detail += f" · {info['repairs']} reparo(s)"
+    if info.get("exploded_mtext"):
+        n = info["exploded_mtext"]
+        detail += f" · {n} {'textos' if n > 1 else 'texto'} em linha única"
     if info.get("fonts"):
         detail += " · fonte da prévia: " + ", ".join(info["fonts"])
     st.caption(detail)
