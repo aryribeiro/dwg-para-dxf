@@ -37,12 +37,11 @@ st.markdown("""
     .block-container {
         padding-top: 0rem !important;
         padding-bottom: 0rem !important;
-        /* Uma prancha de CAD não cabe numa coluna estreita: espremida em
-           28rem (416 px na tela), a cota de 0,12 unidade de um desenho de
-           30 unidades vira 1,6 px e some — o desenho parece vir "sem texto".
-           64rem é um TETO, não uma largura fixa: dentro de um lightbox
-           estreito o contêiner encolhe sozinho para o espaço disponível. */
-        max-width: 64rem !important;
+        /* Largura do cartão por decisão do dono: fica estreita, igual à dos
+           apps irmãos. Numa prancha de CAD o texto miúdo não é legível neste
+           tamanho — quem quiser ler abre a prévia em tela cheia, e é por isso
+           que a imagem é gerada com 4000 px (ver PREVIEW_LONG_SIDE_PX). */
+        max-width: 28rem !important;
     }
     header {display: none !important;}
     footer {display: none !important;}
