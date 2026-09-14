@@ -126,9 +126,12 @@ def test_o_dxf_entregue_abre_limpo_depois_do_reparo(tmp_path):
 
 def test_pagina_lado_maior_e_piso():
     page, dpi = app.page_for_extents(1000.0, 500.0)
-    assert round(page.width_in_mm) == 254
-    assert round(page.height_in_mm) == 127
-    assert dpi == 160
+    assert round(page.width_in_mm) == round(app.PREVIEW_LONG_SIDE_IN * 25.4)
+    assert round(page.height_in_mm) == round(app.PREVIEW_LONG_SIDE_IN * 25.4 / 2)
+    # o DPI sai das constantes, não de um número copiado: quando a resolução
+    # da prévia muda, este teste tem de continuar medindo a regra, e não
+    # reprovar por discordar de um valor decorado
+    assert dpi == round(app.PREVIEW_LONG_SIDE_PX / app.PREVIEW_LONG_SIDE_IN)
     page, _ = app.page_for_extents(10000.0, 1.0)
     assert page.height_in_mm >= app.PREVIEW_MIN_SIDE_PX / dpi * 25.4 - 0.1
 

@@ -37,7 +37,12 @@ st.markdown("""
     .block-container {
         padding-top: 0rem !important;
         padding-bottom: 0rem !important;
-        max-width: 28rem !important;
+        /* Uma prancha de CAD não cabe numa coluna estreita: espremida em
+           28rem (416 px na tela), a cota de 0,12 unidade de um desenho de
+           30 unidades vira 1,6 px e some — o desenho parece vir "sem texto".
+           64rem é um TETO, não uma largura fixa: dentro de um lightbox
+           estreito o contêiner encolhe sozinho para o espaço disponível. */
+        max-width: 64rem !important;
     }
     header {display: none !important;}
     footer {display: none !important;}
@@ -82,11 +87,13 @@ TARGET_EXT = "dxf"
 # nenhum dos dois registros. Conferido em iana.org/assignments/media-types.
 TARGET_MIME = "image/vnd.dxf"
 
-# A prévia serve só para conferir na tela que o desenho veio inteiro — o que
-# se baixa é o DXF. 1600 px chegam de sobra na coluna estreita do app e
-# custam 2,6 MP de memória em vez dos 16 MP de uma imagem de 4000 px, o que
-# importa no contêiner de 1 GB do Streamlit Cloud.
-PREVIEW_LONG_SIDE_PX = 1600
+# A prévia serve para conferir que o desenho veio inteiro — o que se baixa é
+# o DXF. Medido numa prancha real de 30 unidades com cotas de 0,12: a 1600 px
+# a menor cota fica com 5,7 px na imagem, legível só em 1:1; ampliar a imagem
+# na tela cheia do Streamlit já não tinha resolução para dar. A 4000 px a
+# mesma cota fica com 15,5 px e a tela cheia vira uma leitura de verdade.
+# É o mesmo número do app irmão dwg-para-png, já aprovado em produção.
+PREVIEW_LONG_SIDE_PX = 4000
 PREVIEW_LONG_SIDE_IN = 10.0
 PREVIEW_MIN_SIDE_PX = 200
 PAGE_MARGIN_MM = 5.0
