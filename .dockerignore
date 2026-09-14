@@ -1,0 +1,9 @@
+.venv
+.git
+.env
+__pycache__
+.pytest_cache
+tests/output
+bin/*.exe
+bin/*.dll
+*.png

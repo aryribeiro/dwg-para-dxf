@@ -1,0 +1,17 @@
+# Espelho do Streamlit Cloud: Debian trixie, Python 3.13 e os pacotes do
+# packages.txt instalados por apt. As FONTES DE SISTEMA importam: sem elas o
+# ambiente não reproduz o servidor e um defeito de ordem de registro de fonte
+# passa despercebido (foi o que aconteceu no app irmão de PNG).
+# Uso: docker build --load -f tests/Dockerfile.smoke -t dwg-dxf-smoke . \
+#      && docker run --rm dwg-dxf-smoke
+FROM python:3.13-slim-trixie
+WORKDIR /app
+COPY packages.txt .
+RUN apt-get update \
+ && xargs -a packages.txt apt-get install -y --no-install-recommends \
+ && rm -rf /var/lib/apt/lists/*
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt pytest
+COPY . .
+RUN chmod +x bin/dwg2dxf && bin/dwg2dxf --version
+CMD ["python", "-m", "pytest", "-q", "-p", "no:cacheprovider"]
